@@ -11,8 +11,8 @@ const int handbrake_sense = 5;
 int ledState = LOW;         // the current state of the output pin
 int buttonState = HIGH;             // the current reading from the input pin
 int remoteState = HIGH;             // the current reading from the input pin
-int lastButtonState = LOW;   // the previous reading from the input pin
-int lastRemoteState = LOW;   // the previous reading from the input pin
+int lastButtonState = HIGH;   // the previous reading from the input pin
+int lastRemoteState = HIGH;   // the previous reading from the input pin
 bool engine = false;
 bool door_open = true;
 bool remote_started = false;
@@ -168,7 +168,7 @@ void loop() {
       reading = digitalRead(buttonPin);
       buttonState = HIGH;
   }  
-  else if ((engine == false) && (digitalRead(brake) == HIGH) && (buttonState == LOW ) && (lastButtonState != buttonState)) {
+  else if ((engine == false) && (digitalRead(brake) == HIGH) && (buttonState == buttonState ) && (lastButtonState != buttonState)) {
      time_now = millis();
       digitalWrite(11, HIGH);
       digitalWrite(12, HIGH);
@@ -207,16 +207,30 @@ void loop() {
         door_open = false;
       digitalWrite(11, HIGH);
       digitalWrite(12, HIGH);
-       while(millis() < time_now + lock + acc) {ledState = !ledState;}
-      engine = true;
+       while(millis() < time_now + lock + acc) {
+             if (digitalRead(door_sense) != remoteState) {
+      remoteState = digitalRead(door_sense);
+
+      // only toggle the LED if the new button state is LOW
+      if ((remoteState == LOW)) {
+          remote = remote +1;
+      }
+     // if (remote == 2) {digitalWrite(10, HIGH);}
+    }
+                  
+       }
+     // engine = true;
+
+     if (remote == 3) {
        while ((digitalRead(oil_pressure) == HIGH) && ((millis() < time_now + lock + acc + start))){ //wait approx. [period] ms
       digitalWrite(13, HIGH);
        }
+     }
       //if (digitalRead(2)  == LOW){
        // while(millis() < time_now + acc + start)
         delay(100);
       digitalWrite(13, LOW);
-     // }
+      
      // else {
         //(while(millis() < time_now + acc + start));
      //  delay(2000);
@@ -231,7 +245,7 @@ void loop() {
       delay(100);
      // reading = digitalRead(buttonPin);
     }
-     if ((engine == true) && (door_open == false) && (remote >= 3 ) && (remote_started == true) && (remote_stop_allowed == true)) {
+     if ((engine == true) && (door_open == false) && (remote == 3 ) && (remote_started == true) && (remote_stop_allowed == true)) {
       
       //time_now = millis();
       digitalWrite(11, LOW);
