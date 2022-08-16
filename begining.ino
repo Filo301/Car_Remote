@@ -18,6 +18,7 @@ unsigned long debounceDelay = 30;    // the debounce time; increase if the outpu
 void setup() {
   pinMode(buttonPin, INPUT);
   pinMode(ledPin, OUTPUT);
+  pinMode(breake, INPUT);
 
   // set initial LED state
   digitalWrite(ledPin, ledState);
@@ -51,7 +52,7 @@ void loop() {
          if ((state == 2) && (engine == false)) {
           state = 0;
         }
-        else {
+        else if (digitalRead(breake) == LOW) {
           state = state +1;
         }
       }
@@ -81,23 +82,28 @@ void loop() {
     digitalWrite(12, HIGH);
     digitalWrite(11, HIGH);
   }
-     if ((engine == true) && (digitalRead(breake) == HIGH) && (buttonState == )) {
+     if ((engine == true) && (digitalRead(breake) == HIGH) && (buttonState == LOW ) && (lastButtonState != buttonState) ) {
       
-      engine = false;
+      
       digitalWrite(11, LOW);
       digitalWrite(12, LOW);
+      engine = false;
       state = 0;
-      delay(200);
+      reading = digitalRead(buttonPin);
+      delay(3000);
+      reading = digitalRead(buttonPin);
   }  
-  else if ((engine == false) && (digitalRead(breake) == HIGH) && (buttonState == LOW)) {
+  else if ((engine == false) && (digitalRead(breake) == HIGH) && (buttonState == LOW ) && (lastButtonState != buttonState)) {
       digitalWrite(11, HIGH);
       digitalWrite(12, HIGH);
+      engine = true;
       delay(1300);
       digitalWrite(13, HIGH);
       delay(900);
       digitalWrite(13, LOW);
       engine = true;
       state = 2;
+      reading = digitalRead(buttonPin);
     }
       else {};
       // save the reading. Next time through the loop, it'll be the lastButtonState:
