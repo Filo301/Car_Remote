@@ -17,6 +17,7 @@ bool engine = false;
 bool door_open = true;
 bool remote_started = false;
 bool remote_stop_allowed = false;
+bool timeron = false;
 byte remote = 0;
 byte state = 0;
 
@@ -25,11 +26,14 @@ byte state = 0;
 unsigned long lastDebounceTime = 0;  // the last time the output pin was toggled
 unsigned long debounceDelay = 50;    // the debounce time; increase if the output flickers
 unsigned long remoteLastDebounceTime = 0;  // the last time the output pin was toggled
-unsigned long remoteDebounceDelay = 50;    // the debounce time; increase if the output flickers
+unsigned long remoteDebounceDelay = 25;    // the debounce time; increase if the output flickers
 int acc = 1500;
 int start = 1200;
 int lock = 500;
+int waiting = 20000;
+unsigned long timer = 0;
 unsigned long time_now = 0;
+//unsigned long time_now = 0;
 
 void setup() {
   pinMode(buttonPin, INPUT_PULLUP);
@@ -47,7 +51,6 @@ void loop() {
   // read the state of the switch into a local variable:
   int reading = digitalRead(buttonPin);
   int readingdoor = digitalRead(door_sense);
-  readingdoor = digitalRead(door_sense);
    time_now = millis();
 
   // check to see if you just pressed the button
@@ -83,13 +86,13 @@ void loop() {
 
 
 
+  readingdoor = digitalRead(door_sense);
 
     // If the switch changed, due to noise or pressing:
   if (readingdoor != lastRemoteState) {
     // reset the debouncing timer
     remoteLastDebounceTime = millis();
   }
-  readingdoor = digitalRead(door_sense);
 
   if ((millis() - remoteLastDebounceTime) > remoteDebounceDelay) {
     // whatever the reading is at, it's been there for longer than the debounce
@@ -100,17 +103,30 @@ void loop() {
       remoteState = readingdoor;
 
       // only toggle the LED if the new button state is LOW
-      if (remoteState == LOW) {
+      if ((remoteState == LOW) || (remoteState != lastRemoteState)) {
           remote = remote +1;
       }
      // if (remote == 2) {digitalWrite(10, HIGH);}
     }
   }
-
+  if ((remote != 0) && (timeron == false)){
+    timer = millis();
+    timeron = true;
+  }
+    while ((timeron == true) && (millis() >= timer + waiting)){
+      remote = 0;
+      timeron = false;
+    }
+    if (timeron == true){
+      digitalWrite(10, HIGH);
+    }
+      else {digitalWrite(10, LOW);
+      }
+    
   if (digitalRead(brake) == HIGH){
     remote_stop_allowed = false;
   }
-  
+
 
   // set the LED:
   digitalWrite(ledPin, ledState);
@@ -171,6 +187,7 @@ void loop() {
      //  delay(2000);
     //  digitalWrite(13, LOW);
 //  };
+      remote_stop_allowed = false;
       engine = true;
       state = 2;
       remote = 0;
@@ -210,10 +227,11 @@ void loop() {
       remote_started = true;
       remote_stop_allowed = true;
       remote = 0;
+      timeron = false;
       delay(100);
      // reading = digitalRead(buttonPin);
     }
-     if ((engine == true) && (door_open == false) && (remote == 3 ) && (remote_started == true) && (remote_stop_allowed == true)) {
+     if ((engine == true) && (door_open == false) && (remote >= 3 ) && (remote_started == true) && (remote_stop_allowed == true)) {
       
       //time_now = millis();
       digitalWrite(11, LOW);
@@ -221,9 +239,13 @@ void loop() {
       engine = false;
       state = 0;
       remote = 0;
+      //remote_started = true;
+      timeron = false;
+
+
       //reading = digitalRead(buttonPin);
        //while(millis() < time_now + acc + start);
-      delay(200);
+      delay(300);
         //while(millis() < lastDebounceTime + start)
       //reading = digitalRead(buttonPin);
       //buttonState = HIGH;
