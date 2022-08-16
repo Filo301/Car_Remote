@@ -1,13 +1,14 @@
-#define LED_PIN 13
-#define BUTTON_PIN 2
+#define LED_PIN 8
+#define BUTTON_PIN 7
+#define BREAKE 6
 
 byte lastButtonState = LOW;
-byte ledState = LOW;
+byte ledState = HIGH;
 bool engine = false;
 byte state = 0;
 byte buttonState = digitalRead(BUTTON_PIN);
 
-unsigned long debounceDuration = 150; // millis
+unsigned long debounceDuration = 30; // millis
 unsigned long lastTimeButtonStateChanged = 0;
 
 void setup() {
@@ -23,7 +24,9 @@ void loop() {
       lastTimeButtonStateChanged = millis();
       lastButtonState = buttonState;
       if (buttonState == LOW) {
-        //ledState = (ledState == HIGH) ? LOW: HIGH;
+        ledState = (ledState == HIGH) ? LOW: HIGH;
+                digitalWrite(LED_PIN, ledState);
+
         if ((state == 2) && (engine == false)) {
           state = 0;
         }
@@ -51,7 +54,7 @@ void loop() {
     digitalWrite(12, HIGH);
     digitalWrite(11, HIGH);
   }
-     if ((engine == false) && (digitalRead(3) == HIGH) && (digitalRead(2) == LOW)) {
+     if ((engine == false) && (digitalRead(BREAKE) == HIGH) && (buttonState != lastButtonState)) {
       digitalWrite(11, HIGH);
       digitalWrite(12, HIGH);
       delay(1300);
@@ -61,13 +64,13 @@ void loop() {
       engine = true;
       state = 2;
     }
-  else if ((engine == true) && (digitalRead(3) == HIGH) && (digitalRead(2) == LOW)) {
+  else if ((engine == true) && (digitalRead(BREAKE) == HIGH) && (buttonState != lastButtonState)) {
       
       engine = false;
       digitalWrite(11, LOW);
       digitalWrite(12, LOW);
       state = 0;
-      delay(2000);
+      delay(200);
   }  
       else {};
     
