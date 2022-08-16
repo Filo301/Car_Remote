@@ -25,7 +25,7 @@ byte state = 0;
 unsigned long lastDebounceTime = 0;  // the last time the output pin was toggled
 unsigned long debounceDelay = 50;    // the debounce time; increase if the output flickers
 unsigned long remoteLastDebounceTime = 0;  // the last time the output pin was toggled
-unsigned long remoteDebounceDelay = 60;    // the debounce time; increase if the output flickers
+unsigned long remoteDebounceDelay = 50;    // the debounce time; increase if the output flickers
 int acc = 1500;
 int start = 1200;
 int lock = 500;
@@ -47,6 +47,7 @@ void loop() {
   // read the state of the switch into a local variable:
   int reading = digitalRead(buttonPin);
   int readingdoor = digitalRead(door_sense);
+  readingdoor = digitalRead(door_sense);
    time_now = millis();
 
   // check to see if you just pressed the button
@@ -209,10 +210,10 @@ void loop() {
       remote_started = true;
       remote_stop_allowed = true;
       remote = 0;
-      delay(50);
+      delay(100);
      // reading = digitalRead(buttonPin);
     }
-     if ((engine == true) && (door_open == false) && (remote >= 3 ) && (remote_started == true) && (remote_stop_allowed == true)) {
+     if ((engine == true) && (door_open == false) && (remote == 3 ) && (remote_started == true) && (remote_stop_allowed == true)) {
       
       //time_now = millis();
       digitalWrite(11, LOW);
@@ -230,5 +231,6 @@ void loop() {
   }  
       // save the reading. Next time through the loop, it'll be the lastButtonState:
   lastButtonState = reading;
+  lastRemoteState = readingdoor;
 }
  
