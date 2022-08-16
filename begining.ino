@@ -1,33 +1,54 @@
-#define LED_PIN 8
-#define BUTTON_PIN 7
-#define BREAKE 6
+// constants won't change. They're used here to set pin numbers:
+const int buttonPin = 7;    // the number of the pushbutton pin
+const int ledPin = 8;      // the number of the LED pin
+const int breake = 6;
 
-byte lastButtonState = LOW;
-byte ledState = HIGH;
+// Variables will change:
+int ledState = LOW;         // the current state of the output pin
+int buttonState = HIGH;             // the current reading from the input pin
+int lastButtonState = LOW;   // the previous reading from the input pin
 bool engine = false;
 byte state = 0;
-byte buttonState = digitalRead(BUTTON_PIN);
 
-unsigned long debounceDuration = 30; // millis
-unsigned long lastTimeButtonStateChanged = 0;
+// the following variables are unsigned longs because the time, measured in
+// milliseconds, will quickly become a bigger number than can be stored in an int.
+unsigned long lastDebounceTime = 0;  // the last time the output pin was toggled
+unsigned long debounceDelay = 30;    // the debounce time; increase if the output flickers
 
 void setup() {
-  pinMode(LED_PIN, OUTPUT);
-  pinMode(BUTTON_PIN, INPUT);
-  digitalRead(BUTTON_PIN);
+  pinMode(buttonPin, INPUT);
+  pinMode(ledPin, OUTPUT);
+
+  // set initial LED state
+  digitalWrite(ledPin, ledState);
 }
 
 void loop() {
-  if (millis() - lastTimeButtonStateChanged > debounceDuration) {
-    byte buttonState = digitalRead(BUTTON_PIN);
-    if (buttonState != lastButtonState) {
-      lastTimeButtonStateChanged = millis();
-      lastButtonState = buttonState;
-      if (buttonState == LOW) {
-        ledState = (ledState == HIGH) ? LOW: HIGH;
-                digitalWrite(LED_PIN, ledState);
+  // read the state of the switch into a local variable:
+  int reading = digitalRead(buttonPin);
 
-        if ((state == 2) && (engine == false)) {
+  // check to see if you just pressed the button
+  // (i.e. the input went from LOW to HIGH), and you've waited long enough
+  // since the last press to ignore any noise:
+
+  // If the switch changed, due to noise or pressing:
+  if (reading != lastButtonState) {
+    // reset the debouncing timer
+    lastDebounceTime = millis();
+  }
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    // whatever the reading is at, it's been there for longer than the debounce
+    // delay, so take it as the actual current state:
+
+    // if the button state has changed:
+    if (reading != buttonState) {
+      buttonState = reading;
+
+      // only toggle the LED if the new button state is LOW
+      if (buttonState == LOW) {
+        ledState = !ledState;
+         if ((state == 2) && (engine == false)) {
           state = 0;
         }
         else {
@@ -35,14 +56,20 @@ void loop() {
         }
       }
     }
-    if (engine == true)
-    {
-      digitalWrite(10, HIGH);
-    }else if (engine == false){
-      digitalWrite(10, LOW);
-    }
+  
+
+  // set the LED:
+  digitalWrite(ledPin, ledState);
+  if (engine == true) {
+    digitalWrite(9, HIGH);
+  }else if (engine == false) {
+    digitalWrite(9, LOW);
   }
-    if (state == 0) {
+   // lastButtonState = reading;
+
+
+        }
+   if (state == 0) {
    // digitalWrite(10, HIGH);
     digitalWrite(11, LOW);
     digitalWrite(12, LOW);
@@ -54,7 +81,15 @@ void loop() {
     digitalWrite(12, HIGH);
     digitalWrite(11, HIGH);
   }
-     if ((engine == false) && (digitalRead(BREAKE) == HIGH) && (buttonState != lastButtonState)) {
+     if ((engine == true) && (digitalRead(breake) == HIGH) && (buttonState == )) {
+      
+      engine = false;
+      digitalWrite(11, LOW);
+      digitalWrite(12, LOW);
+      state = 0;
+      delay(200);
+  }  
+  else if ((engine == false) && (digitalRead(breake) == HIGH) && (buttonState == LOW)) {
       digitalWrite(11, HIGH);
       digitalWrite(12, HIGH);
       delay(1300);
@@ -64,15 +99,7 @@ void loop() {
       engine = true;
       state = 2;
     }
-  else if ((engine == true) && (digitalRead(BREAKE) == HIGH) && (buttonState != lastButtonState)) {
-      
-      engine = false;
-      digitalWrite(11, LOW);
-      digitalWrite(12, LOW);
-      state = 0;
-      delay(200);
-  }  
       else {};
-    
+      // save the reading. Next time through the loop, it'll be the lastButtonState:
+  lastButtonState = reading;
 }
-
