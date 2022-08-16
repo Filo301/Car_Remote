@@ -1,24 +1,43 @@
 // constants won't change. They're used here to set pin numbers:
 const int buttonPin = 7;    // the number of the pushbutton pin
 const int ledPin = 8;      // the number of the LED pin
-const int breake = 6;
+const int brake = 6;
+const int oil_pressure = 2;
+const int door_sense = 4;
+const int door_lock = 10;
+const int handbrake_sense = 5;
 
 // Variables will change:
 int ledState = LOW;         // the current state of the output pin
 int buttonState = HIGH;             // the current reading from the input pin
+int remoteState = HIGH;             // the current reading from the input pin
 int lastButtonState = LOW;   // the previous reading from the input pin
+int lastRemoteState = LOW;   // the previous reading from the input pin
 bool engine = false;
+bool door_open = true;
+bool remote_started = false;
+bool remote_stop_allowed = false;
+byte remote = 0;
 byte state = 0;
 
 // the following variables are unsigned longs because the time, measured in
 // milliseconds, will quickly become a bigger number than can be stored in an int.
 unsigned long lastDebounceTime = 0;  // the last time the output pin was toggled
-unsigned long debounceDelay = 30;    // the debounce time; increase if the output flickers
+unsigned long debounceDelay = 50;    // the debounce time; increase if the output flickers
+unsigned long remoteLastDebounceTime = 0;  // the last time the output pin was toggled
+unsigned long remoteDebounceDelay = 60;    // the debounce time; increase if the output flickers
+int acc = 1500;
+int start = 1200;
+int lock = 500;
+unsigned long time_now = 0;
 
 void setup() {
-  pinMode(buttonPin, INPUT);
+  pinMode(buttonPin, INPUT_PULLUP);
   pinMode(ledPin, OUTPUT);
-  pinMode(breake, INPUT);
+  pinMode(brake, INPUT);
+  pinMode(oil_pressure, INPUT_PULLUP);
+  pinMode(door_sense, INPUT_PULLUP);
+  pinMode(door_lock, OUTPUT);
 
   // set initial LED state
   digitalWrite(ledPin, ledState);
@@ -27,6 +46,8 @@ void setup() {
 void loop() {
   // read the state of the switch into a local variable:
   int reading = digitalRead(buttonPin);
+  int readingdoor = digitalRead(door_sense);
+   time_now = millis();
 
   // check to see if you just pressed the button
   // (i.e. the input went from LOW to HIGH), and you've waited long enough
@@ -48,15 +69,46 @@ void loop() {
 
       // only toggle the LED if the new button state is LOW
       if (buttonState == LOW) {
-        ledState = !ledState;
-         if ((state == 2) && (engine == false)) {
+       // ledState = !ledState;
+         if ((state >= 2) && (engine == false)) {
           state = 0;
         }
-        else if (digitalRead(breake) == LOW) {
+        else if (digitalRead(brake) == LOW) {
           state = state +1;
         }
       }
     }
+
+
+
+
+
+    // If the switch changed, due to noise or pressing:
+  if (readingdoor != lastRemoteState) {
+    // reset the debouncing timer
+    remoteLastDebounceTime = millis();
+  }
+  readingdoor = digitalRead(door_sense);
+
+  if ((millis() - remoteLastDebounceTime) > remoteDebounceDelay) {
+    // whatever the reading is at, it's been there for longer than the debounce
+    // delay, so take it as the actual current state:
+
+    // if the button state has changed:
+    if (readingdoor != remoteState) {
+      remoteState = readingdoor;
+
+      // only toggle the LED if the new button state is LOW
+      if (remoteState == LOW) {
+          remote = remote +1;
+      }
+     // if (remote == 2) {digitalWrite(10, HIGH);}
+    }
+  }
+
+  if (digitalRead(brake) == HIGH){
+    remote_stop_allowed = false;
+  }
   
 
   // set the LED:
@@ -67,7 +119,9 @@ void loop() {
     digitalWrite(9, LOW);
   }
    // lastButtonState = reading;
-
+//if (digitalRead(door_sense) == LOW){
+//  remote = remote +1;
+//}
 
         }
    if (state == 0) {
@@ -82,30 +136,99 @@ void loop() {
     digitalWrite(12, HIGH);
     digitalWrite(11, HIGH);
   }
-     if ((engine == true) && (digitalRead(breake) == HIGH) && (buttonState == LOW ) && (lastButtonState != buttonState) ) {
+     if ((engine == true) && (digitalRead(brake) == HIGH) && (buttonState == LOW ) && (lastButtonState != buttonState) ) {
       
-      
+      time_now = millis();
       digitalWrite(11, LOW);
       digitalWrite(12, LOW);
       engine = false;
       state = 0;
+      //reading = digitalRead(buttonPin);
+       //while(millis() < time_now + acc + start);
+      delay(800);
+      remote = 0;
+        //while(millis() < lastDebounceTime + start)
       reading = digitalRead(buttonPin);
-      delay(3000);
-      reading = digitalRead(buttonPin);
+      buttonState = HIGH;
   }  
-  else if ((engine == false) && (digitalRead(breake) == HIGH) && (buttonState == LOW ) && (lastButtonState != buttonState)) {
+  else if ((engine == false) && (digitalRead(brake) == HIGH) && (buttonState == LOW ) && (lastButtonState != buttonState)) {
+     time_now = millis();
       digitalWrite(11, HIGH);
       digitalWrite(12, HIGH);
+       while(millis() < time_now + acc) {ledState = !ledState;}
       engine = true;
-      delay(1300);
+       while ((digitalRead(oil_pressure) == HIGH) && ((millis() < time_now + acc + start) || (digitalRead(buttonPin) == LOW))){ //wait approx. [period] ms
       digitalWrite(13, HIGH);
-      delay(900);
+       }
+      //if (digitalRead(2)  == LOW){
+       // while(millis() < time_now + acc + start)
+        delay(100);
       digitalWrite(13, LOW);
+     // }
+     // else {
+        //(while(millis() < time_now + acc + start));
+     //  delay(2000);
+    //  digitalWrite(13, LOW);
+//  };
       engine = true;
       state = 2;
-      reading = digitalRead(buttonPin);
+      remote = 0;
+      buttonState = HIGH;
+     // reading = digitalRead(buttonPin);
     }
       else {};
+
+
+
+   if ((engine == false) && (remote == 3)) {
+     time_now = millis();
+      while(millis() < time_now + lock) {
+        digitalWrite(10, HIGH);
+        }
+        digitalWrite(10, LOW);
+        door_open = false;
+      digitalWrite(11, HIGH);
+      digitalWrite(12, HIGH);
+       while(millis() < time_now + lock + acc) {ledState = !ledState;}
+      engine = true;
+       while ((digitalRead(oil_pressure) == HIGH) && ((millis() < time_now + lock + acc + start))){ //wait approx. [period] ms
+      digitalWrite(13, HIGH);
+       }
+      //if (digitalRead(2)  == LOW){
+       // while(millis() < time_now + acc + start)
+        delay(100);
+      digitalWrite(13, LOW);
+     // }
+     // else {
+        //(while(millis() < time_now + acc + start));
+     //  delay(2000);
+    //  digitalWrite(13, LOW);
+//  };
+      engine = true;
+      state = 2;
+      remote_started = true;
+      remote_stop_allowed = true;
+      remote = 0;
+      delay(50);
+     // reading = digitalRead(buttonPin);
+    }
+     if ((engine == true) && (door_open == false) && (remote >= 3 ) && (remote_started == true) && (remote_stop_allowed == true)) {
+      
+      //time_now = millis();
+      digitalWrite(11, LOW);
+      digitalWrite(12, LOW);
+      engine = false;
+      state = 0;
+      remote = 0;
+      //reading = digitalRead(buttonPin);
+       //while(millis() < time_now + acc + start);
+      delay(200);
+        //while(millis() < lastDebounceTime + start)
+      //reading = digitalRead(buttonPin);
+      //buttonState = HIGH;
+      
+  }  
       // save the reading. Next time through the loop, it'll be the lastButtonState:
   lastButtonState = reading;
 }
+ 
