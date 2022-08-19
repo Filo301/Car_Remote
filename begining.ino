@@ -55,6 +55,7 @@ void loop() {
   int readingdoor = digitalRead(door_sense);
    time_now = millis();
 
+
   // check to see if you just pressed the button
   // (i.e. the input went from LOW to HIGH), and you've waited long enough
   // since the last press to ignore any noise:
@@ -248,15 +249,12 @@ void loop() {
         delay(100);
       digitalWrite(13, LOW);
       
-     // else {
-        //(while(millis() < time_now + acc + start));
-     //  delay(2000);
-    //  digitalWrite(13, LOW);
 //  };
       if (digitalRead(oil_pressure) == LOW){
         engine = true;
       }
       else {engine = false;}
+
       state = 2;
       remote_started = true;
       remote_stop_allowed = true;
