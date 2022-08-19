@@ -28,9 +28,11 @@ unsigned long debounceDelay = 50;    // the debounce time; increase if the outpu
 unsigned long remoteLastDebounceTime = 0;  // the last time the output pin was toggled
 unsigned long remoteDebounceDelay = 25;    // the debounce time; increase if the output flickers
 int acc = 1500;
-int start = 3200;
+int start = 1200;
 int lock = 500;
 int waiting = 5000;
+int remote_wait = 2000;
+int remote_acc = 20000;
 unsigned long timer = 0;
 unsigned long time_now = 0;
 //unsigned long time_now = 0;
@@ -149,9 +151,19 @@ void loop() {
   } else if (state == 1) {
     digitalWrite(11, HIGH);
 
-  } else if (state == 2) {
+  } else if ((state == 2) && (remote_started == false)) {
     digitalWrite(12, HIGH);
     digitalWrite(11, HIGH);
+  }else if ((state == 2) && (remote_started == true) && (engine == true)) {
+    digitalWrite(12, HIGH);
+    digitalWrite(11, HIGH);
+  }else if ((state == 2) && (remote_started == true) && (engine == false)) {
+    time_now = millis();
+    while (millis() <= time_now + remote_acc ){
+    digitalWrite(12, HIGH);
+    digitalWrite(11, HIGH);
+    }
+    state = 0;
   }
      if ((engine == true) && (digitalRead(brake) == HIGH) && (buttonState == LOW ) && (lastButtonState != buttonState) ) {
       
@@ -202,12 +214,17 @@ void loop() {
      time_now = millis();
       while(millis() < time_now + lock) {
         digitalWrite(10, HIGH);
+         if (digitalRead(door_sense) != remoteState) {
+      remoteState = digitalRead(door_sense);
+
+     // if (remote == 2) {digitalWrite(10, HIGH);}
+    }
         }
         digitalWrite(10, LOW);
         door_open = false;
       digitalWrite(11, HIGH);
       digitalWrite(12, HIGH);
-       while(millis() < time_now + lock + acc) {
+       while(millis() < time_now + lock + acc + remote_wait) {
              if (digitalRead(door_sense) != remoteState) {
       remoteState = digitalRead(door_sense);
 
@@ -222,7 +239,7 @@ void loop() {
      // engine = true;
 
      if (remote == 3) {
-       while ((digitalRead(oil_pressure) == HIGH) && ((millis() < time_now + lock + acc + start))){ //wait approx. [period] ms
+       while ((digitalRead(oil_pressure) == HIGH) && ((millis() < time_now + lock + acc + start + remote_wait))){ //wait approx. [period] ms
       digitalWrite(13, HIGH);
        }
      }
@@ -236,7 +253,10 @@ void loop() {
      //  delay(2000);
     //  digitalWrite(13, LOW);
 //  };
-      engine = true;
+      if (digitalRead(oil_pressure) == LOW){
+        engine = true;
+      }
+      else {engine = false;}
       state = 2;
       remote_started = true;
       remote_stop_allowed = true;
