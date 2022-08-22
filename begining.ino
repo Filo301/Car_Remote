@@ -2,11 +2,15 @@
 const int buttonPin = 7;    // the number of the pushbutton pin
 const int ledPin = 8;      // the number of the LED pin
 const int brake = 6;
+const int one = 11;
+const int sec = 12;
+const int starter = 13;
 const int oil_pressure = 2;
 const int door_sense = 4;
-const int door_lock = 10;
+const int door_lock = 9;
 const int handbrake = 5;
 const int gear_neutral = 3;
+const int voltage = A0;
 
 // Variables will change:
 int ledState = LOW;         // the current state of the output pin
@@ -14,9 +18,10 @@ int buttonState = HIGH;             // the current reading from the input pin
 int remoteState = HIGH;             // the current reading from the input pin
 int lastButtonState = HIGH;   // the previous reading from the input pin
 int lastRemoteState = HIGH;   // the previous reading from the input pin
-bool engine = false;
+bool engine_running = false;
 bool engine_start_allowed = true;
-bool oil_pressure_requied = true;
+bool oil_pressure_requied = false;
+bool voltage_requied = false;
 bool handbrake_requied = true;
 bool neutral_gear_requied = false;
 bool door_open = true;
@@ -24,8 +29,10 @@ bool remote_start_allowed = true;
 bool remote_started = false;
 bool remote_stop_allowed = false;
 bool timeron = false;
+byte remote_count = 0;
+byte remote_starts = 3;
 byte voltage_s = 12;
-byte voltege_r = 13;
+byte voltage_r = 13;
 byte remote = 0;
 byte state = 0;
 
@@ -85,7 +92,7 @@ void loop() {
       // only toggle the LED if the new button state is LOW
       if (buttonState == LOW) {
        // ledState = !ledState;
-         if ((state >= 2) && (engine == false)) {
+         if ((state >= 2) && (engine_running == false)) {
           state = 0;
         }
         else if (digitalRead(brake) == LOW) {
@@ -141,11 +148,15 @@ void loop() {
 
   // set the LED:
   digitalWrite(ledPin, ledState);
-  if (engine == true) {
+  if (engine_running == true) {
     digitalWrite(9, HIGH);
-  }else if (engine == false) {
+  }else if (engine_running == false) {
     digitalWrite(9, LOW);
   }
+        }
+
+        if ((digitalRead(oil_pressure) == LOW) && (oil_pressure_requied == true)){
+          engine_start_allowed = false;
         }
 
 if ((handbrake_requied == true) && (handbrake == LOW) && (neutral_gear_requied == true) && (gear_neutral == HIGH))
@@ -167,34 +178,40 @@ else
 
    if (state == 0) {
    // digitalWrite(10, HIGH);
-    digitalWrite(11, LOW);
-    digitalWrite(12, LOW);
-    engine = false;
+    digitalWrite(one, LOW);
+    digitalWrite(sec, LOW);
+    engine_running = false;
   } else if (state == 1) {
-    digitalWrite(11, HIGH);
+    digitalWrite(one, HIGH);
 
   } else if ((state == 2) && (remote_started == false)) {
-    digitalWrite(12, HIGH);
-    digitalWrite(11, HIGH);
-  }else if ((state == 2) && (remote_started == true) && (engine == true)) {
-    digitalWrite(12, HIGH);
-    digitalWrite(11, HIGH);
-  }else if ((state == 2) && (remote_started == true) && (engine == false)) {
+    digitalWrite(one, HIGH);
+    digitalWrite(sec, HIGH);
+  }else if ((state == 2) && (remote_started == true) && (engine_running == true)) {
+    digitalWrite(one, HIGH);
+    digitalWrite(sec, HIGH);
+  }else if ((state == 2) && (remote_started == true) && (engine_running == false)) {
     time_now = millis();
     while (millis() <= time_now + remote_acc ){
-    digitalWrite(12, HIGH);
-    digitalWrite(11, HIGH);
+             if (digitalRead(door_sense) != remoteState) {
+             remoteState = digitalRead(door_sense);
+             if ((remoteState == LOW)) {
+             remote = remote +1;
+            }
+           } 
+    digitalWrite(one, HIGH);
+    digitalWrite(sec, HIGH);
     }
 
     state = 0;
-    
+
   }
-     if ((engine == true) && (digitalRead(brake) == HIGH) && (buttonState == LOW ) && (lastButtonState != buttonState) ) {
+     if ((engine_running == true) && (digitalRead(brake) == HIGH) && (buttonState == LOW ) && (lastButtonState != buttonState) ) {
       
       time_now = millis();
-      digitalWrite(11, LOW);
-      digitalWrite(12, LOW);
-      engine = false;
+    digitalWrite(one, HIGH);
+    digitalWrite(sec, HIGH);
+      engine_running = false;
       state = 0;
       //reading = digitalRead(buttonPin);
        //while(millis() < time_now + acc + start);
@@ -204,12 +221,12 @@ else
       reading = digitalRead(buttonPin);
       buttonState = HIGH;
   }  
-  else if ((engine == false) && (engine_start_allowed == true) && (digitalRead(brake) == HIGH) && (buttonState == buttonState ) && (lastButtonState != buttonState)) {
+  else if ((engine_running == false) && (engine_start_allowed == true) && (digitalRead(brake) == HIGH) && (buttonState == buttonState ) && (lastButtonState != buttonState)) {
      time_now = millis();
-      digitalWrite(11, HIGH);
-      digitalWrite(12, HIGH);
+    digitalWrite(one, HIGH);
+    digitalWrite(sec, HIGH);
        while(millis() < time_now + acc) {ledState = !ledState;}
-      engine = true;
+      engine_running = true;
        while ((digitalRead(oil_pressure) == HIGH) && ((millis() < time_now + acc + start) || (digitalRead(buttonPin) == LOW))){ //wait approx. [period] ms
       digitalWrite(13, HIGH);
        }
@@ -224,54 +241,78 @@ else
     //  digitalWrite(13, LOW);
 //  };
       remote_stop_allowed = false;
-      engine = true;
+      engine_running = true;
       state = 2;
       remote = 0;
       buttonState = HIGH;
      // reading = digitalRead(buttonPin);
     }
-      else {};
 
 
 
-   if ((engine == false) && (remote == 3)) {
+  if ((engine_running == false) && (remote == 2)) {
+     
+
+        state = 2;
+        remote_started = true;
+
+   }
+
+
+
+
+   if ((engine_running == false) && (remote == 3)) {
      time_now = millis();
       while(millis() < time_now + lock) {
-        digitalWrite(10, HIGH);
+        digitalWrite(door_lock, HIGH);
          if (digitalRead(door_sense) != remoteState) {
-      remoteState = digitalRead(door_sense);
-
-     // if (remote == 2) {digitalWrite(10, HIGH);}
-    }
-        }
-        digitalWrite(10, LOW);
+           remoteState = digitalRead(door_sense);
+           }
+          }
+        digitalWrite(door_lock, LOW);
         door_open = false;
-      digitalWrite(11, HIGH);
-      digitalWrite(12, HIGH);
-
-
-       while(millis() < time_now + lock + acc + remote_wait) {
+        digitalWrite(11, HIGH);
+        digitalWrite(12, HIGH);
+         while(millis() < time_now + lock + remote_wait) {
              if (digitalRead(door_sense) != remoteState) {
-      remoteState = digitalRead(door_sense);
-      // only toggle the LED if the new button state is LOW
-      if ((remoteState == LOW)) {
-          remote = remote +1;
-      }
-     // if (remote == 2) {digitalWrite(10, HIGH);}
-    }
-                  
-       }
-     // engine = true;
+             remoteState = digitalRead(door_sense);
+             if ((remoteState == LOW)) {
+             remote = remote +1;
+            }
+           }               
+          }
 
      if ((remote == 3)) {
-       while ((engine_start_allowed == true) && ((millis() < time_now + lock + acc + start + remote_wait))){ //wait approx. [period] ms
-      digitalWrite(13, HIGH);
+       while (remote_count < remote_starts){
+         // analogRead(voltage) = voltage_s
+           time_now = millis();
+           digitalWrite(11, HIGH);
+           digitalWrite(12, HIGH);
+            while (millis() < time_now + acc){}
+
+             while ((engine_start_allowed == true) && ((millis() < time_now + acc + start))){ //wait approx. [period] ms
+             digitalWrite(13, HIGH);
+             }
+           delay(100);
+           digitalWrite(13, LOW);
+           remote_count = remote_count +1;
+           while (millis() < time_now + start + acc *2) {
+          //   analogRead(voltage) = voltage_r;
+               if (((digitalRead(oil_pressure) == LOW) && (oil_pressure_requied == true)) || ((voltage_s - voltage_r > 1) && (voltage_requied == true)) || ((oil_pressure_requied == false) && (voltage_requied == false))){
+                engine_start_allowed = false;
+               }
+           }
+           if (engine_start_allowed == true){
+           digitalWrite(11, LOW);
+           digitalWrite(12, LOW);
+             while (millis() < time_now + start + remote_wait *2){
+                }
+           }
        }
      }
       //if (digitalRead(2)  == LOW){
        // while(millis() < time_now + acc + start)
-        delay(100);
-      digitalWrite(13, LOW);
+    
       
      // else {
         //(while(millis() < time_now + acc + start));
@@ -279,8 +320,9 @@ else
     //  digitalWrite(13, LOW);
 //  };
       if (digitalRead(oil_pressure) == LOW){
-        engine = true;
+        engine_running = true;
       }
+     
       state = 2;
       remote_started = true;
       remote_stop_allowed = true;
@@ -289,12 +331,12 @@ else
       delay(100);
      // reading = digitalRead(buttonPin);
     }
-     if ((engine == true) && (door_open == false) && (remote == 3 ) && (remote_started == true) && (remote_stop_allowed == true)) {
+     if ((engine_running == true) && (door_open == false) && (remote == 3 ) && (remote_started == true) && (remote_stop_allowed == true)) {
       
       //time_now = millis();
       digitalWrite(11, LOW);
       digitalWrite(12, LOW);
-      engine = false;
+      engine_running = false;
       state = 0;
       remote = 0;
       //remote_started = true;
